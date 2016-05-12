@@ -1,4 +1,4 @@
-package photomonkey
+package bot
 
 import (
 	"errors"
