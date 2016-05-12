@@ -13,5 +13,5 @@ func main() {
 		log.Fatal(err)
 	}
 
-	photomonkey.Start(specs.Token)
+	photomonkey.Start(specs.Token, specs.ImageDir)
 }

@@ -1,0 +1,6 @@
+#!/bin/bash
+
+export PHOTOMONKEY_TOKEN="193288305:AAHBqaPwxn4vMjQV6Y6hRlunThR3MxPHEFc"
+export PHOTOMONKEY_IMAGE_DIR=/tmp
+
+go $@
