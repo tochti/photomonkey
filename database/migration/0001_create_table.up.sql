@@ -1,5 +1,6 @@
 CREATE TABLE photos (
 	id TEXT,
 	hash TEXT,
-	caption TEXT
+	caption TEXT,
+	time TIMESTAMP
 );

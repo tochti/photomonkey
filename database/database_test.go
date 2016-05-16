@@ -38,9 +38,15 @@ func Test_NewPhoto(t *testing.T) {
 		},
 	}
 
-	err := db.NewPhoto(tc.Photo.ID, tc.Photo.Hash, tc.Photo.Caption)
+	photo, err := db.NewPhoto(tc.Photo.ID, tc.Photo.Hash, tc.Photo.Caption)
 	if err != nil {
 		t.Fatal(err)
+	}
+
+	if photo.ID != tc.Photo.ID ||
+		photo.Hash != tc.Photo.Hash ||
+		photo.Caption != tc.Photo.Caption {
+		t.Fatalf("Expect %v was %v", tc.Photo, photo)
 	}
 
 	err = tDb.IsInTable(
@@ -72,7 +78,7 @@ func Test_ReadAllPhotos(t *testing.T) {
 		},
 	}
 
-	err := db.NewPhoto(tc.Expected.ID, tc.Expected.Hash, tc.Expected.Caption)
+	_, err := db.NewPhoto(tc.Expected.ID, tc.Expected.Hash, tc.Expected.Caption)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -103,7 +109,7 @@ func Test_RemovePhoto(t *testing.T) {
 		},
 	}
 
-	err := db.NewPhoto(tc.Expected.ID, tc.Expected.Hash, tc.Expected.Caption)
+	_, err := db.NewPhoto(tc.Expected.ID, tc.Expected.Hash, tc.Expected.Caption)
 	if err != nil {
 		t.Fatal(err)
 	}

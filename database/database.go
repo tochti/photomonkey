@@ -3,6 +3,7 @@ package database
 import (
 	"database/sql"
 	"fmt"
+	"time"
 
 	"github.com/kelseyhightower/envconfig"
 	_ "github.com/mattes/migrate/driver/sqlite3"
@@ -15,7 +16,7 @@ var (
 
 type (
 	DatabaseMethods interface {
-		NewPhoto(id, hash, comment string) error
+		NewPhoto(id, hash, comment string) (Photo, error)
 		ReadAllPhotos() ([]Photo, error)
 		RemovePhotoByHash(hash string) error
 	}
@@ -36,19 +37,27 @@ type (
 		ID      string
 		Hash    string
 		Caption string
+		Time    time.Time
 	}
 )
 
 // Insert new photo in database
-func (p *SQLiteConnPool) NewPhoto(id, hash, caption string) error {
-	q := fmt.Sprintf("INSERT INTO %v VALUES (?,?,?)", TablePhotos)
+func (p *SQLiteConnPool) NewPhoto(id, hash, caption string) (Photo, error) {
+	q := fmt.Sprintf("INSERT INTO %v VALUES (?,?,?,?)", TablePhotos)
 
-	_, err := p.Pool.Exec(q, id, hash, caption)
+	date := time.Now()
+	_, err := p.Pool.Exec(q, id, hash, caption, date)
 	if err != nil {
-		return err
+		return Photo{}, err
 	}
 
-	return nil
+	photo := Photo{
+		ID:      id,
+		Hash:    hash,
+		Caption: caption,
+		Time:    date,
+	}
+	return photo, nil
 }
 
 // Read all photos from database
@@ -63,7 +72,7 @@ func (p *SQLiteConnPool) ReadAllPhotos() ([]Photo, error) {
 	photos := []Photo{}
 	for rows.Next() {
 		p := Photo{}
-		err := rows.Scan(&p.ID, &p.Hash, &p.Caption)
+		err := rows.Scan(&p.ID, &p.Hash, &p.Caption, &p.Time)
 		if err != nil {
 			return []Photo{}, err
 		}
