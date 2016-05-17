@@ -1,6 +1,7 @@
 package bot
 
 import (
+	"crypto/sha1"
 	"errors"
 	"fmt"
 	"io"
@@ -11,6 +12,8 @@ import (
 
 	"github.com/kelseyhightower/envconfig"
 	"github.com/tochti/chief"
+	"github.com/tochti/photomonkey/database"
+	"github.com/tochti/photomonkey/observer"
 
 	"bitbucket.org/mrd0ll4r/tbotapi"
 )
@@ -36,12 +39,15 @@ type (
 		HTTPClient *http.Client
 		Token      string
 		ImageDir   string
+		Observers  *observer.PhotoObservers
+		Log        *log.Logger
+		Db         database.DatabaseMethods
 	}
 )
 
-func Start(token string, imageDir string) {
+func Start(logger *log.Logger, observers *observer.PhotoObservers, db database.DatabaseMethods, token string, imageDir string) {
 
-	log.Println("Monkey is running....")
+	logger.Println("Monkey is running....")
 
 	bot, err := tbotapi.New(token)
 	if err != nil {
@@ -53,6 +59,9 @@ func Start(token string, imageDir string) {
 		HTTPClient: http.DefaultClient,
 		Token:      token,
 		ImageDir:   imageDir,
+		Observers:  observers,
+		Log:        logger,
+		Db:         db,
 	}
 
 	c := chief.New(5, decodeJob(photoHandler))
@@ -106,14 +115,14 @@ func (h *photoHandler) HandleUpdate(update tbotapi.Update) {
 
 	err := h.HandlePhoto(msg)
 	if err != nil {
-		log.Println(err)
+		h.Log.Println(err)
 	}
 }
 
 func (h *photoHandler) HandlePhoto(message *tbotapi.Message) error {
 	photo := findBiggestPhoto(message.Photo)
 	fileID := photo.ID
-	log.Printf("Receive image with id=%v\n", fileID)
+	h.Log.Printf("Receive image with id=%v\n", fileID)
 
 	botResp, err := h.Bot.GetFile(fileID)
 	if err != nil {
@@ -123,7 +132,7 @@ func (h *photoHandler) HandlePhoto(message *tbotapi.Message) error {
 	filePath := botResp.File.Path
 	photoURL := fmt.Sprintf("https://api.telegram.org/file/bot%v/%v", h.Token, filePath)
 
-	log.Println(photoURL)
+	h.Log.Println(photoURL)
 
 	resp, err := h.HTTPClient.Get(photoURL)
 	if err != nil {
@@ -142,14 +151,21 @@ func (h *photoHandler) HandlePhoto(message *tbotapi.Message) error {
 	if err != nil {
 		return err
 	}
+	defer fh.Close()
 
 	_, err = io.Copy(fh, resp.Body)
 	if err != nil {
-		log.Println(err)
+		return err
 	}
 
-	log.Printf("Store photo in %v\n", photoPath)
-	saveCaption(message, photoName)
+	h.Log.Printf("Store photo in %v\n", photoPath)
+
+	photoInDB, err := h.savePhotoInDatabase(message, photoName)
+	if err != nil {
+		return err
+	}
+
+	h.Observers.Broadcast(photoInDB)
 
 	return nil
 }
@@ -169,5 +185,38 @@ func findBiggestPhoto(tmp *[]tbotapi.PhotoSize) tbotapi.PhotoSize {
 	return photos[biggestPhoto]
 }
 
-func saveCaption(message *tbotapi.Message, photoName string) {
+func (h *photoHandler) savePhotoInDatabase(message *tbotapi.Message, photoName string) (database.Photo, error) {
+	var caption string
+	if *message.Caption != "" {
+		caption = *message.Caption
+	}
+
+	hash, err := sha1OfFile(path.Join(h.ImageDir, photoName))
+	if err != nil {
+		return database.Photo{}, err
+	}
+
+	photo, err := h.Db.NewPhoto(photoName, hash, caption)
+	if err != nil {
+		return database.Photo{}, err
+	}
+
+	return photo, nil
+}
+
+func sha1OfFile(p string) (string, error) {
+	fh, err := os.Open(p)
+	if err != nil {
+		return "", err
+	}
+	defer fh.Close()
+
+	h := sha1.New()
+
+	_, err = io.Copy(h, fh)
+	if err != nil {
+		return "", err
+	}
+
+	return fmt.Sprintf("%x", h.Sum(nil)), nil
 }
