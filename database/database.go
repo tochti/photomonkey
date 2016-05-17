@@ -18,6 +18,7 @@ type (
 	DatabaseMethods interface {
 		NewPhoto(id, hash, comment string) (Photo, error)
 		ReadAllPhotos() ([]Photo, error)
+		ReadAllPhotosNewer(time.Time) ([]Photo, error)
 		RemovePhotoByHash(hash string) error
 	}
 
@@ -34,10 +35,10 @@ type (
 	}
 
 	Photo struct {
-		ID      string
-		Hash    string
-		Caption string
-		Time    time.Time
+		ID         string
+		Hash       string
+		Caption    string
+		CreateTime time.Time
 	}
 )
 
@@ -52,10 +53,10 @@ func (p *SQLiteConnPool) NewPhoto(id, hash, caption string) (Photo, error) {
 	}
 
 	photo := Photo{
-		ID:      id,
-		Hash:    hash,
-		Caption: caption,
-		Time:    date,
+		ID:         id,
+		Hash:       hash,
+		Caption:    caption,
+		CreateTime: date,
 	}
 	return photo, nil
 }
@@ -72,7 +73,30 @@ func (p *SQLiteConnPool) ReadAllPhotos() ([]Photo, error) {
 	photos := []Photo{}
 	for rows.Next() {
 		p := Photo{}
-		err := rows.Scan(&p.ID, &p.Hash, &p.Caption, &p.Time)
+		err := rows.Scan(&p.ID, &p.Hash, &p.Caption, &p.CreateTime)
+		if err != nil {
+			return []Photo{}, err
+		}
+
+		photos = append(photos, p)
+	}
+
+	return photos, nil
+}
+
+// Read all photos from database newer as X
+func (p *SQLiteConnPool) ReadAllPhotosNewer(newer time.Time) ([]Photo, error) {
+	q := fmt.Sprintf("SELECT * FROM %v WHERE create_time >= ? ORDER BY create_time", TablePhotos)
+
+	rows, err := p.Pool.Query(q, newer)
+	if err != nil {
+		return []Photo{}, err
+	}
+
+	photos := []Photo{}
+	for rows.Next() {
+		p := Photo{}
+		err := rows.Scan(&p.ID, &p.Hash, &p.Caption, &p.CreateTime)
 		if err != nil {
 			return []Photo{}, err
 		}
@@ -119,7 +143,7 @@ func (s SQLiteSpecs) String() string {
 	return fmt.Sprintf("sqlite3://%v", s.Path)
 }
 
-func ReadMigrationSepcs(prefix string) (MigrationSpecs, error) {
+func ReadMigrationSpecs(prefix string) (MigrationSpecs, error) {
 	specs := MigrationSpecs{}
 
 	err := envconfig.Process(prefix, &specs)

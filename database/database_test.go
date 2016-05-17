@@ -2,31 +2,12 @@ package database
 
 import (
 	"database/sql"
-	"fmt"
-	"log"
 	"testing"
-
-	"github.com/mattes/migrate/migrate"
-)
-
-var (
-	TestDatabaseConnPool *sql.DB
-	TestAppName          = "TEST"
-)
-
-type (
-	TestDatabaseMethods interface {
-		IsInTable(table, where string, args ...interface{}) error
-		Reset(*testing.T)
-	}
-
-	SQLiteTestConnPool struct {
-		Pool *sql.DB
-	}
+	"time"
 )
 
 func Test_NewPhoto(t *testing.T) {
-	db, tDb := initNewTestDB(t)
+	db, tDb := InitNewTestDB(t)
 
 	tc := struct {
 		Photo Photo
@@ -66,7 +47,7 @@ func Test_NewPhoto(t *testing.T) {
 }
 
 func Test_ReadAllPhotos(t *testing.T) {
-	db, _ := initNewTestDB(t)
+	db, _ := InitNewTestDB(t)
 
 	tc := struct {
 		Expected Photo
@@ -96,8 +77,39 @@ func Test_ReadAllPhotos(t *testing.T) {
 	}
 }
 
+func Test_ReadAllPhotosNewer(t *testing.T) {
+	db, _ := InitNewTestDB(t)
+
+	tc := struct {
+		Expected Photo
+	}{
+		Expected: Photo{
+			ID:      "123",
+			Hash:    "hash",
+			Caption: "comment",
+		},
+	}
+
+	tmp, err := db.NewPhoto(tc.Expected.ID, tc.Expected.Hash, tc.Expected.Caption)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	photos, err := db.ReadAllPhotosNewer(tmp.CreateTime.Add(-1 * time.Nanosecond))
+
+	if len(photos) != 1 {
+		t.Fatalf("Expect len %v was %v", 1, len(photos))
+	}
+
+	if tc.Expected.ID != photos[0].ID ||
+		tc.Expected.Hash != photos[0].Hash ||
+		tc.Expected.Caption != photos[0].Caption {
+		t.Fatalf("Expect %v was %v", tc.Expected, photos)
+	}
+}
+
 func Test_RemovePhoto(t *testing.T) {
-	db, tDb := initNewTestDB(t)
+	db, tDb := InitNewTestDB(t)
 
 	tc := struct {
 		Expected Photo
@@ -131,50 +143,6 @@ func Test_RemovePhoto(t *testing.T) {
 
 }
 
-func (p *SQLiteTestConnPool) IsInTable(table, where string, args ...interface{}) error {
-
-	q := fmt.Sprintf("SELECT * FROM %v WHERE %v", table, where)
-	_, err := p.Pool.Query(q, args...)
-	if err != nil {
-		return err
-	}
-	return nil
-}
-
-func (*SQLiteTestConnPool) Reset(t *testing.T) {
-	migrationSpecs, err := ReadMigrationSepcs(TestAppName)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	sqliteSpecs, err := ReadSQLiteSpecs(TestAppName)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	errs, ok := migrate.ResetSync(sqliteSpecs.String(), migrationSpecs.Path)
-	if !ok {
-		t.Fatal(errs)
-	}
-}
-
-func initNewTestDB(t *testing.T) (DatabaseMethods, TestDatabaseMethods) {
-	db := &SQLiteConnPool{TestDatabaseConnPool}
-	tDb := &SQLiteTestConnPool{TestDatabaseConnPool}
-
-	tDb.Reset(t)
-
-	return db, tDb
-}
-
 func init() {
-	sqliteSpecs, err := ReadSQLiteSpecs(TestAppName)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	TestDatabaseConnPool, err = sqliteSpecs.DB()
-	if err != nil {
-		log.Fatal(err)
-	}
+	InitSQLiteConnPool(TestAppName)
 }

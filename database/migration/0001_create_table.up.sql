@@ -2,5 +2,5 @@ CREATE TABLE photos (
 	id TEXT,
 	hash TEXT,
 	caption TEXT,
-	time TIMESTAMP
+	create_time TIMESTAMP
 );
