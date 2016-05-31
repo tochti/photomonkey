@@ -7,7 +7,6 @@ import (
 	"os"
 	"syscall"
 	"testing"
-	"time"
 
 	"github.com/gorilla/websocket"
 	"github.com/tochti/photomonkey/database"
@@ -26,27 +25,32 @@ func Test_NextPhoto(t *testing.T) {
 		},
 	}
 
-	db, _ := database.InitNewTestDB(t)
+	//db, _ := database.InitNewTestDB(t)
 
 	upgrader := websocket.Upgrader{}
+
+	photoC := make(chan database.Photo)
 
 	null := os.NewFile(uintptr(syscall.Stdin), os.DevNull)
 	handlers := &Handlers{
 		Log:      log.New(null, "", log.LstdFlags),
 		Database: db,
+		PhotoC:   photoC,
 	}
 
 	newPhoto := handlers.ReceiveNewPhotos(upgrader)
 	ts := httptest.NewServer(newPhoto)
 
-	time.AfterFunc(200*time.Millisecond, func() {
-		for _, photo := range tc.Photos {
-			_, err := db.NewPhoto(photo.ID, photo.Hash, photo.Caption)
-			if err != nil {
-				t.Fatal(err)
+	/*
+		time.AfterFunc(200*time.Millisecond, func() {
+			for _, photo := range tc.Photos {
+				_, err := db.NewPhoto(photo.ID, photo.Hash, photo.Caption)
+				if err != nil {
+					t.Fatal(err)
+				}
 			}
-		}
-	})
+		})
+	*/
 
 	u := url.URL{
 		Scheme: "ws",
