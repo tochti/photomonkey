@@ -1,0 +1,16 @@
+package: github.com/tochti/photomonkey
+import:
+- package: github.com/gorilla/websocket
+- package: github.com/kelseyhightower/envconfig
+- package: github.com/mattes/migrate
+  subpackages:
+  - driver/sqlite3
+  - migrate
+- package: github.com/mattn/go-sqlite3
+- package: github.com/tochti/chief
+- package: github.com/julienschmidt/httprouter
+- package: github.com/tochti/speci
+- package: github.com/jmoiron/sqlx
+- package: github.com/mrd0ll4r/tbotapi
+- package: gopkg.in/resty.v0
+- package: github.com/tochti/dbtt

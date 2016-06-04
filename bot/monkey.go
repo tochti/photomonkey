@@ -11,11 +11,10 @@ import (
 	"path"
 
 	"github.com/kelseyhightower/envconfig"
+	"github.com/mrd0ll4r/tbotapi"
 	"github.com/tochti/chief"
 	"github.com/tochti/photomonkey/database"
 	"github.com/tochti/photomonkey/observer"
-
-	"bitbucket.org/mrd0ll4r/tbotapi"
 )
 
 var (

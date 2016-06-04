@@ -2,3 +2,5 @@
 cmd/run_dev
 *.sqlite
 go_dev
+vendor/
+glide.lock

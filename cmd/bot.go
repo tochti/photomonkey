@@ -6,11 +6,11 @@ import (
 	"net/http"
 	"os"
 
-	"github.com/gorilla/websocket"
 	"github.com/tochti/photomonkey/bot"
 	"github.com/tochti/photomonkey/database"
 	"github.com/tochti/photomonkey/handler"
 	"github.com/tochti/photomonkey/observer"
+	"github.com/tochti/speci"
 )
 
 const (
@@ -26,33 +26,30 @@ func main() {
 		logger.Fatal(err)
 	}
 
-	sqliteSpecs, err := database.ReadSQLiteSpecs(AppName)
+	httpServerSpecs, err := speci.ReadHTTPServer(AppName)
+	if err != nil {
+		logger.Println(err)
+	}
+
+	sqliteSpecs, err := speci.ReadSQLite(AppName)
 	if err != nil {
 		logger.Fatal(err)
 	}
 
-	pool, err := sqliteSpecs.DB()
+	db, err := database.Init("sqlite3", sqliteSpecs.String())
 	if err != nil {
 		logger.Fatal(err)
 	}
-
-	db := &database.SQLiteConnPool{pool}
 
 	observers := &observer.PhotoObservers{}
 
 	go bot.Start(logger, observers, db, botSpecs.Token, botSpecs.ImageDir)
 
-	handlers := &handler.Handlers{
-		Log:      logger,
-		Database: db,
-	}
-
-	upgrader := websocket.Upgrader{}
+	router := handler.NewRouter(db, logger, observers)
 
 	dir := http.Dir(botSpecs.ImageDir)
 	http.Handle("/files", http.StripPrefix("/files/", http.FileServer(dir)))
-	//http.HandleFunc("/all_photos", handlers.ReadAllPhotos)
-	http.Handle("/new_photos", handlers.ReceiveNewPhotos(upgrader))
+	http.Handle("/v1", router)
 
-	http.ListenAndServe(":8080", nil)
+	http.ListenAndServe(httpServerSpecs.String(), nil)
 }

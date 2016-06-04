@@ -7,7 +7,9 @@ import (
 	"time"
 
 	"github.com/gorilla/websocket"
+	"github.com/julienschmidt/httprouter"
 	"github.com/tochti/photomonkey/database"
+	"github.com/tochti/photomonkey/observer"
 )
 
 var (
@@ -20,10 +22,30 @@ type (
 	}
 
 	Handlers struct {
-		Log      *log.Logger
 		Database database.DatabaseMethods
+		Log      *log.Logger
+		PhotoC   chan database.Photo
 	}
 )
+
+func NewRouter(db database.DatabaseMethods, log *log.Logger, observers *observer.PhotoObservers) *httprouter.Router {
+	router := httprouter.New()
+
+	photoC := make(chan database.Photo)
+	observers.Add(photoC)
+
+	handler := Handlers{
+		Database: db,
+		Log:      log,
+		PhotoC:   photoC,
+	}
+	upgrader := websocket.Upgrader{}
+
+	router.Handler("GET", "/v1/new_photos", handler.ReceiveNewPhotos(upgrader))
+	router.Hanlder("GET", "/v1/photos", handler.ReadAllPhotos())
+
+	return router
+}
 
 func (ctx *Handlers) ReceiveNewPhotos(upgrader websocket.Upgrader) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
@@ -33,19 +55,17 @@ func (ctx *Handlers) ReceiveNewPhotos(upgrader websocket.Upgrader) http.HandlerF
 			return
 		}
 
-		ticker := time.NewTicker(time.Second)
-		go ctx.servePhotos(ws, ticker)
+		go ctx.servePhotos(ws)
 	}
 
 }
 
-func (ctx *Handlers) servePhotos(ws *websocket.Conn, ticker *time.Ticker) {
+func (ctx *Handlers) servePhotos(ws *websocket.Conn) {
 	ctx.Log.Println("Start to serve photos")
 	updateTime := time.Now()
-	for range ticker.C {
+	for photo := range ctx.PhotoC {
 		ctx.Log.Println("Last Update Time:", updateTime)
 		ctx.Log.Println("Looking for updates")
-		photos, err := ctx.Database.ReadAllPhotosNewer(updateTime)
 		if err != nil {
 			ctx.Log.Println("Error:", err)
 			continue
