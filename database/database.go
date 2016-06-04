@@ -1,12 +1,11 @@
 package database
 
 import (
-	"database/sql"
 	"fmt"
 	"time"
 
+	"github.com/jmoiron/sqlx"
 	"github.com/kelseyhightower/envconfig"
-	_ "github.com/mattes/migrate/driver/sqlite3"
 	_ "github.com/mattn/go-sqlite3"
 )
 
@@ -22,12 +21,8 @@ type (
 		RemovePhotoByHash(hash string) error
 	}
 
-	SQLiteConnPool struct {
-		Pool *sql.DB
-	}
-
-	SQLiteSpecs struct {
-		Path string `envconfig:"SQLITE_PATH"`
+	SQLiteConn struct {
+		Pool *sqlx.DB
 	}
 
 	MigrationSpecs struct {
@@ -42,8 +37,20 @@ type (
 	}
 )
 
+// Create new Db connection pool
+func Init(driver, url string) (*SQLiteConn, error) {
+	pool, err := sqlx.Connect("sqlite3", url)
+	if err != nil {
+		return &SQLiteConn{}, err
+	}
+
+	return &SQLiteConn{
+		Pool: pool,
+	}, nil
+}
+
 // Insert new photo in database
-func (p *SQLiteConnPool) NewPhoto(id, hash, caption string) (Photo, error) {
+func (p *SQLiteConn) NewPhoto(id, hash, caption string) (Photo, error) {
 	q := fmt.Sprintf("INSERT INTO %v VALUES (?,?,?,?)", TablePhotos)
 
 	date := time.Now()
@@ -62,7 +69,7 @@ func (p *SQLiteConnPool) NewPhoto(id, hash, caption string) (Photo, error) {
 }
 
 // Read all photos from database
-func (p *SQLiteConnPool) ReadAllPhotos() ([]Photo, error) {
+func (p *SQLiteConn) ReadAllPhotos() ([]Photo, error) {
 	q := fmt.Sprintf("SELECT * FROM %v", TablePhotos)
 
 	rows, err := p.Pool.Query(q)
@@ -84,31 +91,8 @@ func (p *SQLiteConnPool) ReadAllPhotos() ([]Photo, error) {
 	return photos, nil
 }
 
-// Read all photos from database newer as X
-func (p *SQLiteConnPool) ReadAllPhotosNewer(newer time.Time) ([]Photo, error) {
-	q := fmt.Sprintf("SELECT * FROM %v WHERE create_time >= ? ORDER BY create_time", TablePhotos)
-
-	rows, err := p.Pool.Query(q, newer)
-	if err != nil {
-		return []Photo{}, err
-	}
-
-	photos := []Photo{}
-	for rows.Next() {
-		p := Photo{}
-		err := rows.Scan(&p.ID, &p.Hash, &p.Caption, &p.CreateTime)
-		if err != nil {
-			return []Photo{}, err
-		}
-
-		photos = append(photos, p)
-	}
-
-	return photos, nil
-}
-
 // Remove photo from database by photo hash
-func (p *SQLiteConnPool) RemovePhotoByHash(hash string) error {
+func (p *SQLiteConn) RemovePhotoByHash(hash string) error {
 	q := fmt.Sprintf("DELETE FROM %v WHERE hash=?", TablePhotos)
 
 	_, err := p.Pool.Exec(q, hash)
@@ -117,30 +101,6 @@ func (p *SQLiteConnPool) RemovePhotoByHash(hash string) error {
 	}
 
 	return nil
-}
-
-func ReadSQLiteSpecs(prefix string) (SQLiteSpecs, error) {
-	specs := SQLiteSpecs{}
-
-	err := envconfig.Process(prefix, &specs)
-	if err != nil {
-		return SQLiteSpecs{}, err
-	}
-
-	return specs, nil
-}
-
-func (s SQLiteSpecs) DB() (*sql.DB, error) {
-	pool, err := sql.Open("sqlite3", s.Path)
-	if err != nil {
-		return &sql.DB{}, err
-	}
-
-	return pool, nil
-}
-
-func (s SQLiteSpecs) String() string {
-	return fmt.Sprintf("sqlite3://%v", s.Path)
 }
 
 func ReadMigrationSpecs(prefix string) (MigrationSpecs, error) {

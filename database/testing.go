@@ -1,81 +1,35 @@
 package database
 
 import (
-	"database/sql"
-	"fmt"
-	"log"
 	"testing"
 
-	"github.com/mattes/migrate/migrate"
+	"github.com/tochti/dbtt"
+	"github.com/tochti/speci"
+
+	_ "github.com/mattes/migrate/driver/sqlite3"
 )
 
 var (
-	TestAppName          = "TEST"
-	TestDatabaseConnPool *sql.DB
+	TestAppName = "TEST"
 )
 
-type (
-	SQLiteTestConnPool struct {
-		Pool           *sql.DB
-		MigrationSpecs MigrationSpecs
-		SQLiteSpecs    SQLiteSpecs
-	}
-
-	TestDatabaseMethods interface {
-		IsInTable(table, where string, args ...interface{}) error
-		Reset(*testing.T)
-	}
-)
-
-func (p *SQLiteTestConnPool) IsInTable(table, where string, args ...interface{}) error {
-
-	q := fmt.Sprintf("SELECT * FROM %v WHERE %v", table, where)
-	_, err := p.Pool.Query(q, args...)
-	if err != nil {
-		return err
-	}
-	return nil
-}
-
-func (p *SQLiteTestConnPool) Reset(t *testing.T) {
-
-	errs, ok := migrate.ResetSync(p.SQLiteSpecs.String(), p.MigrationSpecs.Path)
-	if !ok {
-		t.Fatal(errs)
-	}
-}
-
-func InitNewTestDB(t *testing.T) (DatabaseMethods, TestDatabaseMethods) {
+func InitTestDB(t *testing.T) *SQLiteConn {
 	migrationSpecs, err := ReadMigrationSpecs(TestAppName)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	sqliteSpecs, err := ReadSQLiteSpecs(TestAppName)
+	sqliteSpecs, err := speci.ReadSQLite(TestAppName)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	db := &SQLiteConnPool{TestDatabaseConnPool}
-	tDb := &SQLiteTestConnPool{
-		Pool:           TestDatabaseConnPool,
-		MigrationSpecs: migrationSpecs,
-		SQLiteSpecs:    sqliteSpecs,
-	}
-
-	tDb.Reset(t)
-
-	return db, tDb
-}
-
-func InitSQLiteConnPool(appName string) {
-	sqliteSpecs, err := ReadSQLiteSpecs(appName)
+	db, err := Init("sqlite3", sqliteSpecs.String())
 	if err != nil {
-		log.Fatal(err)
+		t.Fatal(err)
 	}
 
-	TestDatabaseConnPool, err = sqliteSpecs.DB()
-	if err != nil {
-		log.Fatal(err)
-	}
+	dbtt.ResetDB(t, sqliteSpecs.String(), migrationSpecs.Path)
+
+	return db
 }
