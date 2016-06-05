@@ -3,33 +3,32 @@ package database
 import (
 	"testing"
 
+	_ "github.com/mattes/migrate/driver/postgres"
 	"github.com/tochti/dbtt"
 	"github.com/tochti/speci"
-
-	_ "github.com/mattes/migrate/driver/sqlite3"
 )
 
 var (
 	TestAppName = "TEST"
 )
 
-func InitTestDB(t *testing.T) *SQLiteConn {
+func InitTestDB(t *testing.T) *PostgreSQLConn {
 	migrationSpecs, err := ReadMigrationSpecs(TestAppName)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	sqliteSpecs, err := speci.ReadSQLite(TestAppName)
+	dbSpecs, err := speci.ReadPostgreSQL(TestAppName)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	db, err := Init("sqlite3", sqliteSpecs.String())
+	db, err := Init("postgres", dbSpecs.String())
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	dbtt.ResetDB(t, sqliteSpecs.String(), migrationSpecs.Path)
+	dbtt.ResetDB(t, dbSpecs.String(), migrationSpecs.Path)
 
 	return db
 }

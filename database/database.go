@@ -6,7 +6,7 @@ import (
 
 	"github.com/jmoiron/sqlx"
 	"github.com/kelseyhightower/envconfig"
-	_ "github.com/mattn/go-sqlite3"
+	_ "github.com/lib/pq"
 )
 
 var (
@@ -21,7 +21,7 @@ type (
 		RemovePhotoByHash(hash string) error
 	}
 
-	SQLiteConn struct {
+	PostgreSQLConn struct {
 		Pool *sqlx.DB
 	}
 
@@ -30,70 +30,54 @@ type (
 	}
 
 	Photo struct {
-		ID         string
-		Hash       string
-		Caption    string
-		CreateTime time.Time
+		ID         string    `db:"id"`
+		Hash       string    `db:"hash"`
+		Caption    string    `db:"caption"`
+		CreateTime time.Time `db:"create_time"`
 	}
 )
 
 // Create new Db connection pool
-func Init(driver, url string) (*SQLiteConn, error) {
-	pool, err := sqlx.Connect("sqlite3", url)
+func Init(driver, url string) (*PostgreSQLConn, error) {
+	pool, err := sqlx.Connect(driver, url)
 	if err != nil {
-		return &SQLiteConn{}, err
+		return &PostgreSQLConn{}, err
 	}
 
-	return &SQLiteConn{
+	return &PostgreSQLConn{
 		Pool: pool,
 	}, nil
 }
 
 // Insert new photo in database
-func (p *SQLiteConn) NewPhoto(id, hash, caption string) (Photo, error) {
-	q := fmt.Sprintf("INSERT INTO %v VALUES (?,?,?,?)", TablePhotos)
+func (p *PostgreSQLConn) NewPhoto(id, hash, caption string) (Photo, error) {
+	q := p.Pool.Rebind(fmt.Sprintf("INSERT INTO %v VALUES (?,?,?) RETURNING *", TablePhotos))
 
-	date := time.Now()
-	_, err := p.Pool.Exec(q, id, hash, caption, date)
+	photo := Photo{}
+	err := p.Pool.Get(&photo, q, id, hash, caption)
 	if err != nil {
 		return Photo{}, err
 	}
 
-	photo := Photo{
-		ID:         id,
-		Hash:       hash,
-		Caption:    caption,
-		CreateTime: date,
-	}
 	return photo, nil
 }
 
 // Read all photos from database
-func (p *SQLiteConn) ReadAllPhotos() ([]Photo, error) {
-	q := fmt.Sprintf("SELECT * FROM %v", TablePhotos)
-
-	rows, err := p.Pool.Query(q)
-	if err != nil {
-		return []Photo{}, err
-	}
+func (p *PostgreSQLConn) ReadAllPhotos() ([]Photo, error) {
+	q := p.Pool.Rebind(fmt.Sprintf("SELECT * FROM %v", TablePhotos))
 
 	photos := []Photo{}
-	for rows.Next() {
-		p := Photo{}
-		err := rows.Scan(&p.ID, &p.Hash, &p.Caption, &p.CreateTime)
-		if err != nil {
-			return []Photo{}, err
-		}
-
-		photos = append(photos, p)
+	err := p.Pool.Select(&photos, q)
+	if err != nil {
+		return []Photo{}, err
 	}
 
 	return photos, nil
 }
 
 // Remove photo from database by photo hash
-func (p *SQLiteConn) RemovePhotoByHash(hash string) error {
-	q := fmt.Sprintf("DELETE FROM %v WHERE hash=?", TablePhotos)
+func (p *PostgreSQLConn) RemovePhotoByHash(hash string) error {
+	q := p.Pool.Rebind(fmt.Sprintf("DELETE FROM %v WHERE hash=?", TablePhotos))
 
 	_, err := p.Pool.Exec(q, hash)
 	if err != nil {

@@ -1,6 +1,8 @@
 package database
 
 import (
+	"crypto/sha1"
+	"fmt"
 	"testing"
 
 	"github.com/tochti/dbtt"
@@ -11,8 +13,8 @@ func Test_NewPhoto(t *testing.T) {
 		Photo Photo
 	}{
 		Photo: Photo{
-			ID:      "123",
-			Hash:    "hash",
+			ID:      "AwADBAADYwADO1wlBuF1ogMa7HnMAg",
+			Hash:    fmt.Sprintf("%x", sha1.Sum([]byte("42"))),
 			Caption: "caption",
 		},
 	}
@@ -49,9 +51,9 @@ func Test_ReadAllPhotos(t *testing.T) {
 		Expected Photo
 	}{
 		Expected: Photo{
-			ID:      "123",
-			Hash:    "hash",
-			Caption: "comment",
+			ID:      "AwADBAADYwADO1wlBuF1ogMa7HnMAg",
+			Hash:    fmt.Sprintf("%x", sha1.Sum([]byte("42"))),
+			Caption: "caption",
 		},
 	}
 

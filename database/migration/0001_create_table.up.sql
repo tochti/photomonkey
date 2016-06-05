@@ -1,6 +1,6 @@
 CREATE TABLE photos (
-	id TEXT,
-	hash TEXT,
+	id varchar(40) PRIMARY KEY,
+	hash char(40) NOT NULL,
 	caption TEXT,
-	create_time TIMESTAMP
+	create_time TIMESTAMP DEFAULT current_timestamp
 );
