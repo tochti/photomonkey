@@ -8,15 +8,19 @@ import (
 	"github.com/tochti/dbtt"
 )
 
+var (
+	TestPhoto = Photo{
+		ID:      "AwADBAADYwADO1wlBuF1ogMa7HnMAg",
+		Hash:    fmt.Sprintf("%x", sha1.Sum([]byte("42"))),
+		Caption: "caption",
+	}
+)
+
 func Test_NewPhoto(t *testing.T) {
 	tc := struct {
 		Photo Photo
 	}{
-		Photo: Photo{
-			ID:      "AwADBAADYwADO1wlBuF1ogMa7HnMAg",
-			Hash:    fmt.Sprintf("%x", sha1.Sum([]byte("42"))),
-			Caption: "caption",
-		},
+		Photo: TestPhoto,
 	}
 
 	// Run test
@@ -50,11 +54,7 @@ func Test_ReadAllPhotos(t *testing.T) {
 	tc := struct {
 		Expected Photo
 	}{
-		Expected: Photo{
-			ID:      "AwADBAADYwADO1wlBuF1ogMa7HnMAg",
-			Hash:    fmt.Sprintf("%x", sha1.Sum([]byte("42"))),
-			Caption: "caption",
-		},
+		Expected: TestPhoto,
 	}
 
 	// Run test
@@ -83,11 +83,7 @@ func Test_RemovePhoto(t *testing.T) {
 	tc := struct {
 		Expected Photo
 	}{
-		Expected: Photo{
-			ID:      "123",
-			Hash:    "hash",
-			Caption: "comment",
-		},
+		Expected: TestPhoto,
 	}
 
 	// Run test
