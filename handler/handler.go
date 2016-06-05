@@ -42,7 +42,7 @@ func NewRouter(db database.DatabaseMethods, log *log.Logger, observers *observer
 	upgrader := websocket.Upgrader{}
 
 	router.Handler("GET", "/v1/new_photos", handler.ReceiveNewPhotos(upgrader))
-	router.Hanlder("GET", "/v1/photos", handler.ReadAllPhotos())
+	//router.Handler("GET", "/v1/photos", handler.ReadAllPhotos())
 
 	return router
 }
@@ -65,13 +65,10 @@ func (ctx *Handlers) servePhotos(ws *websocket.Conn) {
 	updateTime := time.Now()
 	for photo := range ctx.PhotoC {
 		ctx.Log.Println("Last Update Time:", updateTime)
-		ctx.Log.Println("Looking for updates")
-		if err != nil {
-			ctx.Log.Println("Error:", err)
-			continue
-		}
 		updateTime = time.Now()
-		ws.WriteJSON(photos)
+		go func() {
+			ws.WriteJSON(photo)
+		}()
 	}
 }
 

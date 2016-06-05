@@ -1,8 +1,10 @@
 package handler
 
 import (
+	"log"
 	"net/http/httptest"
 	"net/url"
+	"os"
 	"testing"
 
 	"github.com/gorilla/websocket"
@@ -15,11 +17,9 @@ func Test_NextPhoto(t *testing.T) {
 		Photo database.Photo
 	}{
 		Photo: database.Photo{
-			{
-				ID:      "123",
-				Hash:    "hash",
-				Caption: "caption",
-			},
+			ID:      "123",
+			Hash:    "hash",
+			Caption: "caption",
 		},
 	}
 
@@ -27,9 +27,9 @@ func Test_NextPhoto(t *testing.T) {
 	{
 		db := database.InitTestDB(t)
 
-		upgrader := websocket.Upgrader{}
 		observer := &observer.PhotoObservers{}
 
+		logger := log.New(os.Stdout, "", log.LstdFlags)
 		router := NewRouter(db, logger, observer)
 		ts := httptest.NewServer(router)
 
@@ -46,20 +46,16 @@ func Test_NextPhoto(t *testing.T) {
 		}
 		defer c.Close()
 
-		photos := []database.Photo{}
-		err = c.ReadJSON(&photos)
+		photo := database.Photo{}
+		err = c.ReadJSON(&photo)
 		if err != nil {
 			t.Fatal(err)
 		}
 
-		if len(photos) != 1 {
-			t.Fatalf("Expect len %v was %v", 1, len(photos))
-		}
-
-		if photos[0].ID != tc.Photo.ID ||
-			photos[0].Hash != tc.Photo.Hash ||
-			photos[0].Caption != tc.Photo.Caption {
-			t.Fatalf("Expect %v was %v", tc.Photo, photos[0])
+		if photo.ID != tc.Photo.ID ||
+			photo.Hash != tc.Photo.Hash ||
+			photo.Caption != tc.Photo.Caption {
+			t.Fatalf("Expect %v was %v", tc.Photo, photo)
 		}
 	}
 }
