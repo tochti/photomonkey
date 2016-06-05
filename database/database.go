@@ -17,7 +17,6 @@ type (
 	DatabaseMethods interface {
 		NewPhoto(id, hash, comment string) (Photo, error)
 		ReadAllPhotos() ([]Photo, error)
-		ReadAllPhotosNewer(time.Time) ([]Photo, error)
 		RemovePhotoByHash(hash string) error
 	}
 
