@@ -1,19 +1,9 @@
 package database
 
 import (
-	"crypto/sha1"
-	"fmt"
 	"testing"
 
 	"github.com/tochti/dbtt"
-)
-
-var (
-	TestPhoto = Photo{
-		ID:      "AwADBAADYwADO1wlBuF1ogMa7HnMAg",
-		Hash:    fmt.Sprintf("%x", sha1.Sum([]byte("42"))),
-		Caption: "caption",
-	}
 )
 
 func Test_NewPhoto(t *testing.T) {

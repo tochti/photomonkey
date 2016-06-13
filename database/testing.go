@@ -1,6 +1,8 @@
 package database
 
 import (
+	"crypto/sha1"
+	"fmt"
 	"testing"
 
 	_ "github.com/mattes/migrate/driver/postgres"
@@ -10,6 +12,12 @@ import (
 
 var (
 	TestAppName = "TEST"
+
+	TestPhoto = Photo{
+		ID:      "AwADBAADYwADO1wlBuF1ogMa7HnMAg",
+		Hash:    fmt.Sprintf("%x", sha1.Sum([]byte("42"))),
+		Caption: "caption",
+	}
 )
 
 func InitTestDB(t *testing.T) *PostgreSQLConn {
