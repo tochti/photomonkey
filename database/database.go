@@ -29,10 +29,10 @@ type (
 	}
 
 	Photo struct {
-		ID         string    `db:"id"`
-		Hash       string    `db:"hash"`
-		Caption    string    `db:"caption"`
-		CreateTime time.Time `db:"create_time"`
+		ID         string    `db:"id" json:"id"`
+		Hash       string    `db:"hash" json:"hash"`
+		Caption    string    `db:"caption" json:"caption"`
+		CreateTime time.Time `db:"create_time" json:"create_time"`
 	}
 )
 
