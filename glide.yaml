@@ -1,12 +1,14 @@
 package: github.com/tochti/photomonkey
+subpackages:
+  - observer
+  - handler
+  - database
+  - cmd
+  - bot
 import:
 - package: github.com/gorilla/websocket
 - package: github.com/kelseyhightower/envconfig
 - package: github.com/mattes/migrate
-  subpackages:
-  - driver/sqlite3
-  - migrate
-- package: github.com/mattn/go-sqlite3
 - package: github.com/tochti/chief
 - package: github.com/julienschmidt/httprouter
 - package: github.com/tochti/speci
@@ -14,3 +16,9 @@ import:
 - package: github.com/mrd0ll4r/tbotapi
 - package: gopkg.in/resty.v0
 - package: github.com/tochti/dbtt
+- package: github.com/lib/pq
+- package: github.com/Sirupsen/logrus
+- package: gopkg.in/h2non/baloo.v0
+- package: github.com/tochti/hrr
+- package: github.com/gin-gonic/gin
+- package: gopkg.in/go-playground/validator.v8
