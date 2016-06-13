@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"fmt"
 	"log"
 	"net/http/httptest"
 	"net/url"
@@ -8,6 +9,7 @@ import (
 	"testing"
 
 	"github.com/gorilla/websocket"
+	"github.com/tochti/hrr"
 	"github.com/tochti/photomonkey/database"
 	"github.com/tochti/photomonkey/observer"
 )
@@ -57,5 +59,41 @@ func Test_NextPhoto(t *testing.T) {
 			photo.Caption != tc.Photo.Caption {
 			t.Fatalf("Expect %v was %v", tc.Photo, photo)
 		}
+	}
+}
+
+func Test_ReadAllPhotos(t *testing.T) {
+	tc := struct {
+		Photo    database.Photo
+		Expected string
+	}{
+		Photo: database.TestPhoto,
+		Expected: fmt.Sprintf(`
+		[
+			{
+				"id": "%v"
+				"hash": "%v",
+				"caption": "%v",
+				"create_date": \w*,
+			}
+		]`, database.TestPhoto.ID,
+			database.TestPhoto.Hash,
+			database.TestPhoto.Caption),
+	}
+
+	// Run test
+	{
+		db := database.InitTestDB(t)
+		_, err := db.NewPhoto(tc.Photo.ID, tc.Photo.Hash, tc.Photo.Caption)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		observer := &observer.PhotoObservers{}
+
+		logger := log.New(os.Stdout, "", log.LstdFlags)
+		router := NewRouter(db, logger, observer)
+
+		hrr.TestJSONGet(t, "/v1/photos", tc.Expected, router)
 	}
 }
