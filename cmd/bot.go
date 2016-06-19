@@ -48,7 +48,7 @@ func main() {
 		logger.Fatal(err)
 	}
 
-	observers := &observer.PhotoObservers{}
+	observers := observer.New()
 
 	go bot.Start(logger, observers, db, botSpecs.Token, botSpecs.ImageDir)
 
@@ -58,8 +58,9 @@ func main() {
 
 	dir := http.Dir(botSpecs.ImageDir)
 	http.Handle("/files/", http.StripPrefix("/files/", http.FileServer(dir)))
-	http.Handle("/v1", router)
+	http.Handle("/v1/", router)
 
+	logger.Println("Listen on " + httpServerSpecs.String())
 	http.ListenAndServe(httpServerSpecs.String(), nil)
 }
 
@@ -71,5 +72,5 @@ func initFrontendRouter(logger *logrus.Logger) {
 	}
 
 	fs := http.FileServer(http.Dir(specs.Dir))
-	http.Handle("/public", http.StripPrefix("/public", fs))
+	http.Handle("/public/", http.StripPrefix("/public/", fs))
 }

@@ -7,13 +7,13 @@ import (
 )
 
 func Test_Observer(t *testing.T) {
-	observer := &PhotoObservers{}
+	observer := New()
 
 	client_channel1 := make(chan database.Photo)
 	client_channel2 := make(chan database.Photo)
 
-	observer.Add(client_channel1)
-	observer.Add(client_channel2)
+	id1 := observer.Add(client_channel1)
+	id2 := observer.Add(client_channel2)
 
 	tc := struct {
 		Expected database.Photo
@@ -39,4 +39,7 @@ func Test_Observer(t *testing.T) {
 		tc.Expected.Caption != p.Caption {
 		t.Fatalf("Expect %v was %v", tc.Expected, p)
 	}
+
+	observer.Remove(id1)
+	observer.Remove(id2)
 }

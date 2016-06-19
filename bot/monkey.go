@@ -186,7 +186,7 @@ func findBiggestPhoto(tmp *[]tbotapi.PhotoSize) tbotapi.PhotoSize {
 
 func (h *photoHandler) savePhotoInDatabase(message *tbotapi.Message, photoName string) (database.Photo, error) {
 	var caption string
-	if *message.Caption != "" {
+	if message.Caption != nil {
 		caption = *message.Caption
 	}
 

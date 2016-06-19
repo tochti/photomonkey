@@ -2,12 +2,12 @@ package handler
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"time"
 
 	"github.com/Sirupsen/logrus"
 	"github.com/gorilla/websocket"
-	"github.com/julienschmidt/httprouter"
 	"github.com/tochti/hrr"
 	"github.com/tochti/photomonkey/database"
 	"github.com/tochti/photomonkey/observer"
@@ -23,27 +23,33 @@ type (
 	}
 
 	Handlers struct {
-		Database database.DatabaseMethods
-		Log      *logrus.Logger
-		PhotoC   chan database.Photo
+		Database  database.DatabaseMethods
+		Log       *logrus.Logger
+		Observers *observer.PhotoObservers
 	}
 )
 
-func NewRouter(db database.DatabaseMethods, log *logrus.Logger, observers *observer.PhotoObservers) *httprouter.Router {
-	router := httprouter.New()
+func NewRouter(db database.DatabaseMethods, log *logrus.Logger, observers *observer.PhotoObservers) http.Handler {
+	router := http.NewServeMux()
 
-	photoC := make(chan database.Photo)
-	observers.Add(photoC)
+	hrr.Logger = log
 
 	handler := Handlers{
-		Database: db,
-		Log:      log,
-		PhotoC:   photoC,
+		Database:  db,
+		Log:       log,
+		Observers: observers,
 	}
 	upgrader := websocket.Upgrader{}
 
-	router.Handler("GET", "/v1/new_photos", handler.ReceiveNewPhotos(upgrader))
-	router.Handler("GET", "/v1/photos", http.HandlerFunc(handler.ReadAllPhotos))
+	router.HandleFunc("/v1/new_photos", handler.ReceiveNewPhotos(upgrader))
+	router.HandleFunc("/v1/photos", func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != "GET" {
+			w.WriteHeader(http.StatusNotImplemented)
+			return
+		}
+
+		handler.ReadAllPhotos(w, r)
+	})
 
 	return router
 }
@@ -57,18 +63,40 @@ func (ctx *Handlers) ReceiveNewPhotos(upgrader websocket.Upgrader) http.HandlerF
 			return
 		}
 
-		go ctx.servePhotos(ws)
+		ctx.servePhotos(ws)
 	}
 
 }
 
 func (ctx *Handlers) servePhotos(ws *websocket.Conn) {
 	ctx.Log.Println("Start to serve photos")
-	updateTime := time.Now()
-	for photo := range ctx.PhotoC {
-		ctx.Log.Println("Last Update Time:", updateTime)
-		updateTime = time.Now()
+
+	photoC := make(chan database.Photo)
+	chanID := ctx.Observers.Add(photoC)
+
+	go func() {
+		defer func() {
+			ctx.Log.Println("Close connection ", chanID)
+			ctx.Observers.Remove(chanID)
+			ws.Close()
+		}()
+
+		for {
+			_, _, err := ws.ReadMessage()
+			if err != nil {
+				if websocket.IsUnexpectedCloseError(err, websocket.CloseGoingAway) {
+					ctx.Log.Error(err)
+				}
+
+				break
+			}
+		}
+	}()
+
+	for photo := range photoC {
 		go func() {
+			l := fmt.Sprintf("Share new photo with websocket %v", chanID)
+			ctx.Log.Println(l)
 			ws.WriteJSON(photo)
 		}()
 	}
