@@ -1,0 +1,28 @@
+body {
+	background-color: #1A1A1A;
+}
+
+#box {
+	width: 35%;
+	margin-left: auto;
+	margin-right: auto;
+}
+
+img {
+	width: 100%;
+	margin-top: 25px;
+	border: 8px solid #818181;
+	border-radius: 4px;
+}
+
+div#caption {
+	width: 80%;
+	color: white;
+	background: black;
+	position: relative;
+	opacity: 0.5;
+	bottom: 90px;
+	left: 50px;
+	padding: 10px;
+	font-size: 1.2em;
+}

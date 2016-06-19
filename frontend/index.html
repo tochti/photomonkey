@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html lang="de" ng-app="photomonkey">
+<head>
+	<meta charset="UTF-8">
+	<title>Banana!</title>
+	<link rel="stylesheet" href="css/yummy.css">
+	<script src="/public/ext/jquery-3.0.0.min.js"></script>
+	<script src="/public/ext/angular.min.js"></script>
+	<script src="/public/ext/angular-websocket.min.js"></script>
+	<script src="/public/photos.js"></script>
+</head>
+<body ng-controller="photos">
+	<div id="box">
+		<img id="photo" src="/public/img/{{photo.id}}" alt="{{photo.caption}}" ng-if="photos.length==0">
+		<img id="photo" src="/files/{{photo.id}}" alt="{{photo.caption}}" ng-if="photos.length!==0">
+		<div id="caption">
+			{{photo.caption}}
+		</div>
+	</div>
+</body>
+</html>
