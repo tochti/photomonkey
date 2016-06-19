@@ -2,12 +2,11 @@ package handler
 
 import (
 	"fmt"
-	"log"
 	"net/http/httptest"
 	"net/url"
-	"os"
 	"testing"
 
+	"github.com/Sirupsen/logrus"
 	"github.com/gorilla/websocket"
 	"github.com/tochti/hrr"
 	"github.com/tochti/photomonkey/database"
@@ -31,7 +30,7 @@ func Test_NextPhoto(t *testing.T) {
 
 		observer := &observer.PhotoObservers{}
 
-		logger := log.New(os.Stdout, "", log.LstdFlags)
+		logger := logrus.New()
 		router := NewRouter(db, logger, observer)
 		ts := httptest.NewServer(router)
 
@@ -91,7 +90,7 @@ func Test_ReadAllPhotos(t *testing.T) {
 
 		observer := &observer.PhotoObservers{}
 
-		logger := log.New(os.Stdout, "", log.LstdFlags)
+		logger := logrus.New()
 		router := NewRouter(db, logger, observer)
 
 		hrr.TestJSONGet(t, "/v1/photos", tc.Expected, router)

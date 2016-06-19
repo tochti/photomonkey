@@ -7,11 +7,12 @@ import (
 
 	_ "github.com/mattes/migrate/driver/postgres"
 	"github.com/tochti/dbtt"
+	"github.com/tochti/photomonkey/app"
 	"github.com/tochti/speci"
 )
 
 var (
-	TestAppName = "TEST"
+	TestAppName = app.Name
 
 	TestPhoto = Photo{
 		ID:      "AwADBAADYwADO1wlBuF1ogMa7HnMAg",

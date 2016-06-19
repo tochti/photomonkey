@@ -10,6 +10,7 @@ import (
 	"os"
 	"path"
 
+	"github.com/Sirupsen/logrus"
 	"github.com/kelseyhightower/envconfig"
 	"github.com/mrd0ll4r/tbotapi"
 	"github.com/tochti/chief"
@@ -18,7 +19,6 @@ import (
 )
 
 var (
-	AppName            = "photomonkey"
 	ErrMissingToken    = errors.New("Missing TOKEN env")
 	ErrMissingImageDir = errors.New("Missing IMAGE_DIR env")
 )
@@ -39,18 +39,18 @@ type (
 		Token      string
 		ImageDir   string
 		Observers  *observer.PhotoObservers
-		Log        *log.Logger
+		Log        *logrus.Logger
 		Db         database.DatabaseMethods
 	}
 )
 
-func Start(logger *log.Logger, observers *observer.PhotoObservers, db database.DatabaseMethods, token string, imageDir string) {
+func Start(logger *logrus.Logger, observers *observer.PhotoObservers, db database.DatabaseMethods, token string, imageDir string) {
 
-	logger.Println("Monkey is running....")
+	logger.Println("Monkey is eating bananas....")
 
 	bot, err := tbotapi.New(token)
 	if err != nil {
-		log.Fatal(err)
+		logger.Error(err)
 	}
 
 	photoHandler := &photoHandler{
@@ -63,7 +63,7 @@ func Start(logger *log.Logger, observers *observer.PhotoObservers, db database.D
 		Db:         db,
 	}
 
-	c := chief.New(5, decodeJob(photoHandler))
+	c := chief.New(5, decodeJob(logger, photoHandler))
 	c.Start()
 
 	for {
@@ -79,9 +79,9 @@ func Start(logger *log.Logger, observers *observer.PhotoObservers, db database.D
 
 }
 
-func ReadSpecs() (*Specs, error) {
+func ReadSpecs(prefix string) (*Specs, error) {
 	s := &Specs{}
-	err := envconfig.Process(AppName, s)
+	err := envconfig.Process(prefix, s)
 	if err != nil {
 		return nil, err
 	}
@@ -95,11 +95,11 @@ func ReadSpecs() (*Specs, error) {
 	return s, nil
 }
 
-func decodeJob(h handler) chief.HandleFunc {
+func decodeJob(logger *logrus.Logger, h handler) chief.HandleFunc {
 	return func(j chief.Job) {
 		update, ok := j.Order.(tbotapi.Update)
 		if !ok {
-			log.Println("Error in decoder func")
+			logger.Error("Error in decoder func")
 			return
 		}
 		h.HandleUpdate(update)
@@ -114,7 +114,7 @@ func (h *photoHandler) HandleUpdate(update tbotapi.Update) {
 
 	err := h.HandlePhoto(msg)
 	if err != nil {
-		h.Log.Println(err)
+		h.Log.Error(err)
 	}
 }
 
@@ -131,7 +131,7 @@ func (h *photoHandler) HandlePhoto(message *tbotapi.Message) error {
 	filePath := botResp.File.Path
 	photoURL := fmt.Sprintf("https://api.telegram.org/file/bot%v/%v", h.Token, filePath)
 
-	h.Log.Println(photoURL)
+	h.Log.Info(photoURL)
 
 	resp, err := h.HTTPClient.Get(photoURL)
 	if err != nil {

@@ -2,10 +2,10 @@ package handler
 
 import (
 	"encoding/json"
-	"log"
 	"net/http"
 	"time"
 
+	"github.com/Sirupsen/logrus"
 	"github.com/gorilla/websocket"
 	"github.com/julienschmidt/httprouter"
 	"github.com/tochti/hrr"
@@ -24,12 +24,12 @@ type (
 
 	Handlers struct {
 		Database database.DatabaseMethods
-		Log      *log.Logger
+		Log      *logrus.Logger
 		PhotoC   chan database.Photo
 	}
 )
 
-func NewRouter(db database.DatabaseMethods, log *log.Logger, observers *observer.PhotoObservers) *httprouter.Router {
+func NewRouter(db database.DatabaseMethods, log *logrus.Logger, observers *observer.PhotoObservers) *httprouter.Router {
 	router := httprouter.New()
 
 	photoC := make(chan database.Photo)
@@ -52,7 +52,8 @@ func (ctx *Handlers) ReceiveNewPhotos(upgrader websocket.Upgrader) http.HandlerF
 	return func(w http.ResponseWriter, r *http.Request) {
 		ws, err := upgrader.Upgrade(w, r, nil)
 		if err != nil {
-			ErrorResponse(w, http.StatusBadRequest, err.Error())
+			e := hrr.NewError("Cannot start websocket connection", err)
+			hrr.Response(w, r).Error(e)
 			return
 		}
 
