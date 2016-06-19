@@ -1,10 +1,1 @@
-* ReadSQLiteSpecs in speci integrieren
-* integriere logrus
-* integriere hrr
-* integriere dbtt
-* logger Parameter für Bot.
-* subscriber für kommunikation zwischen websocket handler und bot. Sende neues photo zu websocket Handler.
-* ReadAllPhotos Handler.
-* Prüfe ob ReadAllPhotosNewer noch benötigt wird wenn subscriber vorhanden ist.
 * Add Frontend.
-* Add AppName zu ReadBotSpecs, remove global var AppName in bot package
