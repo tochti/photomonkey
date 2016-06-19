@@ -1,11 +1,11 @@
 package main
 
 import (
-	"fmt"
-	"log"
 	"net/http"
-	"os"
 
+	"github.com/Sirupsen/logrus"
+	"github.com/kelseyhightower/envconfig"
+	"github.com/tochti/photomonkey/app"
 	"github.com/tochti/photomonkey/bot"
 	"github.com/tochti/photomonkey/database"
 	"github.com/tochti/photomonkey/handler"
@@ -14,14 +14,21 @@ import (
 )
 
 const (
-	AppName = "Photomonkey"
+	AppName = app.Name
+)
+
+type (
+	FrontendSpecs struct {
+		Dir string `envconfig:"FRONTEND_DIR"`
+	}
 )
 
 func main() {
 
-	logger := log.New(os.Stdout, fmt.Sprintf("%v: ", AppName), log.LstdFlags)
+	logger := logrus.New()
+	logger.Formatter = &logrus.JSONFormatter{}
 
-	botSpecs, err := bot.ReadSpecs()
+	botSpecs, err := bot.ReadSpecs(AppName)
 	if err != nil {
 		logger.Fatal(err)
 	}
@@ -31,12 +38,12 @@ func main() {
 		logger.Println(err)
 	}
 
-	sqliteSpecs, err := speci.ReadSQLite(AppName)
+	sqlSpecs, err := speci.ReadPostgreSQL(AppName)
 	if err != nil {
 		logger.Fatal(err)
 	}
 
-	db, err := database.Init("sqlite3", sqliteSpecs.String())
+	db, err := database.Init("postgres", sqlSpecs.String())
 	if err != nil {
 		logger.Fatal(err)
 	}
@@ -47,9 +54,22 @@ func main() {
 
 	router := handler.NewRouter(db, logger, observers)
 
+	initFrontendRouter(logger)
+
 	dir := http.Dir(botSpecs.ImageDir)
-	http.Handle("/files", http.StripPrefix("/files/", http.FileServer(dir)))
+	http.Handle("/files/", http.StripPrefix("/files/", http.FileServer(dir)))
 	http.Handle("/v1", router)
 
 	http.ListenAndServe(httpServerSpecs.String(), nil)
+}
+
+func initFrontendRouter(logger *logrus.Logger) {
+	specs := FrontendSpecs{}
+	err := envconfig.Process(AppName, &specs)
+	if err != nil {
+		logger.Println(err)
+	}
+
+	fs := http.FileServer(http.Dir(specs.Dir))
+	http.Handle("/public", http.StripPrefix("/public", fs))
 }
