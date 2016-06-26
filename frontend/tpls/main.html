@@ -1,0 +1,7 @@
+<div id="box">
+	<img id="none-photo" src="/public/img/default.jpg" ng-show="photos.length===0">
+	<img id="photo" src="/files/{{photo.id}}" alt="{{photo.caption}}" ng-show="photos.length!==0">
+	<div id="caption" ng-show="photo.caption">
+		{{photo.caption}}
+	</div>
+</div>
