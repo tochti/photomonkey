@@ -19,7 +19,7 @@ const (
 
 type (
 	FrontendSpecs struct {
-		Dir string `envconfig:"FRONTEND_DIR"`
+		Dir string `envconfig:"FRONTEND_DIR" required:"true"`
 	}
 )
 
@@ -68,7 +68,7 @@ func initFrontendRouter(logger *logrus.Logger) {
 	specs := FrontendSpecs{}
 	err := envconfig.Process(AppName, &specs)
 	if err != nil {
-		logger.Println(err)
+		logger.Fatalln(err)
 	}
 
 	fs := http.FileServer(http.Dir(specs.Dir))
