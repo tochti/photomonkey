@@ -32,18 +32,116 @@ ctrls.controller('PhotosCtrl', function($http, $log, $websocket, $scope) {
 
     newPhoto: function() {
       clearInterval(this.interval);
-      that.setPhoto($scope.photos.length - 1);
+      this.setPhoto($scope.photos.length - 1);
 
+      var that = this;
       setTimeout(function() {
-        this.slide()
+        that.slide()
       }, showTime);
     },
 
     setPhoto: function(pos) {
+      console.log('--- set photo ---');
+
       $scope.photo = $scope.photos[pos];
-      $('#photo').attr('src', '/files/' + $scope.photo.id);
-      $('#photo').attr('alt', $scope.photo.caption);
-      console.log($scope.photo);
+      photoPath = '/files/' + $scope.photo.id;
+
+      var img = new Image();
+
+      img.addEventListener('load', function() {
+        var windowHeight = window.innerHeight * 0.95;
+        var windowWidth = window.innerWidth * 0.95;
+
+        var imgHeight = img.height;
+        var imgWidth = img.width;
+
+        var newImgHeight = 0;
+        var newImgWidth = 0;
+
+        if (imgHeight > windowHeight && imgWidth > windowWidth) {
+          console.log('width and height to big');
+          // Wenn das Bild auf beiden Seiten zu groß ist
+          // finde heraus über welche Seite das Bild weiter heraus steht.
+          // Passe diese Seite auf Fenstergröße an und verwende den Faktor der Veränderung
+          // um die andere Seite damit anzupassen da diese kleiner war wird
+          // diese daher auch kleiner sein als das Fenster.
+          dH = imgHeight - windowHeight;
+          dW = imgWidth - windowWidth;
+
+          sizes = {}
+          if (dH > dW) {
+            newImgHeight = windowHeight;
+            var f = (1 / imgHeight) * newImgHeight;
+            console.log("factor ", f);
+            newImgWidth = imgWidth * f;
+          } else {
+            newImgWidth = windowWidth;
+            var f = (1 / imgWidth) * newImgWidth;
+            console.log("factor ", f);
+            newImgHeight = imgHeight * f;
+          }
+
+        } else if (imgHeight > windowHeight) {
+          // Wenn nur eine Seite des Bilds über das Fenster hinausragt
+          // wird diese Seite auf Fenster größe angepasst die ander Seite wird um den Faktor
+          // der Veränderung angepasst.
+          console.log('height to big');
+          if (imgHeight > windowHeight) {
+            newImgHeight = windowHeight;
+          } else {
+            newImgHeight = imgHeight;
+          }
+
+          var f = (1 / imgHeight) * newImgHeight;
+          console.log("factor ", f);
+          newImgWidth = imgWidth * f;
+
+        } else if (imgWidth > windowWidth) {
+          console.log('width to big');
+          if (imgWidth > windowWidth) {
+            newImgWidth = windowWidth;
+          } else {
+            newImgWidth = imgWidth;
+          }
+
+          var f = (1 / imgWidth) * newImgWidth;
+          console.log("factor ", f);
+          newImgHeight = imgHeight * f;
+        } else {
+          // Keine Seite des Bilds ist zu groß
+          newImgHeight = imgHeight;
+          newImgWidth = imgWidth;
+        }
+
+        //console.log(photoPath);
+        console.log(img);
+        console.log('window Height', windowHeight);
+        console.log('window Width', windowWidth);
+        console.log('ImgHeight', imgHeight);
+        console.log('ImgWidth', imgWidth);
+        console.log('newImgHeight', newImgHeight);
+        console.log('newImgWidth', newImgWidth);
+
+        photoItem = $('#photo');
+        photoItem.attr('src', photoPath);
+        photoItem.attr('alt', $scope.photo.caption);
+        photoItem.width(newImgWidth);
+        photoItem.height(newImgHeight);
+        if ($scope.photo.caption.length !== 0) {
+          $('#caption').html($scope.photo.caption);
+          $('#caption').show();
+        } else {
+          $('#caption').hide();
+        }
+        box = $('#box');
+        box.width(newImgWidth);
+        box.height(newImgHeight);
+        box.css('margin-top', (windowHeight - newImgHeight) / 2);
+
+      });
+
+      img.src = photoPath;
+
     },
   };
 
@@ -56,52 +154,6 @@ ctrls.controller('PhotosCtrl', function($http, $log, $websocket, $scope) {
   }
 
   // Init data
-  $('#photo').on('load', function() {
-    console.log('Photo is loaded');
-    var windowHeight = window.innerHeight;
-    var windowWidth = window.innerWidth;
-
-    var imgHeight = $('#photo').height();
-    var imgWidth = $('#photo').width();
-
-    var newImgHeight = 0;
-    var newImgWidth = 0;
-
-    if (imgHeight > imgWidth) {
-      if (imgHeight > windowHeight) {
-        newImgHeight = windowHeight * 0.95;
-      } else {
-        newImgHeight = imgHeight;
-      }
-
-      var f = (1 / imgHeight) * newImgHeight;
-      newImgWidth = imgWidth * f;
-
-    } else {
-      if (imgWidth > windowWidth) {
-        newImgWidth = windowWidth * 0.95;
-      } else {
-        newImgWidth = imgWidth;
-      }
-
-      var f = (1 / imgWidth) * newImgWidth;
-      newImgHeight = imgHeight * f;
-    }
-
-    console.log('window Height', windowHeight);
-    console.log('window Width', windowWidth);
-    console.log('ImgHeight', imgHeight);
-    console.log('ImgWidth', imgWidth);
-    console.log('newImgHeight', newImgHeight);
-    console.log('newImgWidth', newImgWidth);
-
-    //$(this).css('height', newImgHeight);
-    //$(this).css('width', newImgWidth);
-    $(this).height(newImgHeight);
-    $(this).width(newImgWidth);
-
-  });
-
   var ws = $websocket('ws://' + serviceAddr + '/v1/new_photos');
   ws.onMessage(receiveNewPhoto);
   ws.onError(function(event) {
