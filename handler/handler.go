@@ -1,7 +1,6 @@
 package handler
 
 import (
-	"encoding/json"
 	"fmt"
 	"net/http"
 	"time"
@@ -116,11 +115,4 @@ func (ctx *Handlers) ReadAllPhotos(w http.ResponseWriter, r *http.Request) {
 
 		return photos, nil
 	})
-}
-
-func ErrorResponse(w http.ResponseWriter, status int, msg string) {
-	w.WriteHeader(status)
-	w.Header().Set("Content-Type", "application/json")
-	err := ErrorMessage{msg}
-	json.NewEncoder(w).Encode(err)
 }
